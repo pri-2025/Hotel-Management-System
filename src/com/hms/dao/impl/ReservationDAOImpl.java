@@ -105,6 +105,7 @@ public class ReservationDAOImpl implements ReservationDAO {
             System.out.println("Error while canceling reservation: " + e);
         }
     }
+    
 
     @Override
     public Reservation getReservationById(int reservationId) {

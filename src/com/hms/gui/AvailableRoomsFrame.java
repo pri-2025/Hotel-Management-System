@@ -6,73 +6,76 @@ import com.hms.entity.Room;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
-import java.awt.event.*;
-import java.sql.Date;
+import java.awt.event.ActionEvent;
+import java.util.Date;
 import java.util.List;
 
 public class AvailableRoomsFrame extends JFrame {
 
     private JTable roomTable;
-    private JButton nextButton;
+    private DefaultTableModel tableModel;
+    private JButton bookButton;
+
     private Date checkInDate, checkOutDate;
 
-    public AvailableRoomsFrame(Date checkIn, Date checkOut) {
-        this.checkInDate = checkIn;
-        this.checkOutDate = checkOut;
+    public AvailableRoomsFrame(Date checkInDate, Date checkOutDate) {
+        this.checkInDate = checkInDate;
+        this.checkOutDate = checkOutDate;
 
         setTitle("Available Rooms");
         setSize(800, 400);
         setLocationRelativeTo(null);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLayout(new BorderLayout());
+        setLayout(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        JLabel heading = new JLabel("Available Rooms", SwingConstants.CENTER);
-        heading.setFont(new Font("Serif", Font.BOLD, 22));
-        heading.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        add(heading, BorderLayout.NORTH);
+        JLabel heading = new JLabel("Available Rooms");
+        heading.setBounds(320, 20, 200, 30);
+        add(heading);
 
-        // Table setup
-        String[] columns = {"Room Number", "Room Type", "AC Type", "Bed Count", "Price"};
-        DefaultTableModel tableModel = new DefaultTableModel(columns, 0);
+        tableModel = new DefaultTableModel();
+        tableModel.setColumnIdentifiers(new String[]{"Room No", "Price", "AC Type", "Room Type"});
+
         roomTable = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(roomTable);
-        add(scrollPane, BorderLayout.CENTER);
+        scrollPane.setBounds(50, 70, 680, 200);
+        add(scrollPane);
 
-        // Fetch and add room data
-        RoomDAO roomDAO = new RoomDAOImpl();
-        List<Room> availableRooms = roomDAO.getAvailableRooms(checkInDate, checkOutDate);
+        bookButton = new JButton("Book Selected Room");
+        bookButton.setBounds(300, 290, 200, 30);
+        add(bookButton);
 
-        for (Room room : availableRooms) {
-            Object[] row = {
-                room.getRoom_num(),
-                room.getType_2(),
-                room.getType_1(),
-                room.getPrice()
-            };
-            tableModel.addRow(row);
-        }
+        loadAvailableRooms();
 
-        // Next button
-        nextButton = new JButton("Proceed to Guest Details");
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.add(nextButton);
-        add(bottomPanel, BorderLayout.SOUTH);
-
-        nextButton.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int selectedRow = roomTable.getSelectedRow();
-                if (selectedRow == -1) {
-                    JOptionPane.showMessageDialog(null, "Please select a room.");
-                    return;
-                }
-
-                int roomNumber = (int) tableModel.getValueAt(selectedRow, 0);
-                dispose();
-                new GuestDetailsFrame();
-            }
-        });
+        bookButton.addActionListener(this::bookSelectedRoom);
 
         setVisible(true);
+    }
+
+    private void loadAvailableRooms() {
+        tableModel.setRowCount(0);
+        RoomDAO roomDAO = new RoomDAOImpl();
+        List<Room> rooms = roomDAO.getAvailableRooms(new java.sql.Date(checkInDate.getTime()),
+                new java.sql.Date(checkOutDate.getTime()));
+
+        for (Room room : rooms) {
+            tableModel.addRow(new Object[]{
+                    room.getRoom_num(),
+                    room.getPrice(),
+                    room.getType_2(),
+                    room.getType_1()
+            });
+        }
+    }
+
+    private void bookSelectedRoom(ActionEvent e) {
+        int selectedRow = roomTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a room to book.");
+            return;
+        }
+
+        int roomNum = (int) tableModel.getValueAt(selectedRow, 0);
+        new GuestDetailsFrame(roomNum, checkInDate, checkOutDate);
+        dispose();
     }
 }

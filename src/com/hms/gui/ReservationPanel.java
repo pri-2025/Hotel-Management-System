@@ -1,148 +1,111 @@
 package com.hms.gui;
 
 import com.hms.dao.ReservationDAO;
-import com.hms.dao.RoomDAO;
 import com.hms.dao.impl.ReservationDAOImpl;
-import com.hms.dao.impl.RoomDAOImpl;
 import com.hms.entity.Reservation;
-import com.hms.entity.Room;
-import com.toedter.calendar.JDateChooser;
 
 import javax.swing.*;
-import java.awt.event.*;
-import java.sql.Date;
-import java.text.SimpleDateFormat;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
 import java.util.List;
 
 public class ReservationPanel extends JFrame {
 
-    private JDateChooser checkInChooser, checkOutChooser;
-    private JComboBox<String> roomDropdown;
-    private JTextField emailField;
-    private JButton showButton, reserveButton;
+    private JTable reservationTable;
+    private DefaultTableModel tableModel;
+    private JButton cancelButton, proceedButton;
 
-    private RoomDAO roomDAO = new RoomDAOImpl();
     private ReservationDAO reservationDAO = new ReservationDAOImpl();
+    private String guestEmail; // Logged-in user's email
 
-    private List<Room> availableRooms;
+    public ReservationPanel(String guestEmail) {
+        this.guestEmail = guestEmail;
 
-    public ReservationPanel() {
-        setTitle("Make a Reservation");
-        setSize(500, 400);
-        setLayout(null);
+        setTitle("My Reservations");
+        setSize(900, 500);
         setLocationRelativeTo(null);
+        setLayout(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
-        JLabel checkInLabel = new JLabel("Check-In Date:");
-        checkInLabel.setBounds(40, 40, 100, 25);
-        add(checkInLabel);
+        JLabel heading = new JLabel("Your Reservation Records");
+        heading.setFont(new Font("Arial", Font.BOLD, 20));
+        heading.setBounds(300, 20, 350, 30);
+        add(heading);
 
-        checkInChooser = new JDateChooser();
-        checkInChooser.setBounds(160, 40, 200, 25);
-        add(checkInChooser);
+        tableModel = new DefaultTableModel();
+        tableModel.setColumnIdentifiers(new String[]{
+                "Reservation ID", "Room No", "Guest Email", "Check-In", "Check-Out", "Hotel ID"
+        });
 
-        JLabel checkOutLabel = new JLabel("Check-Out Date:");
-        checkOutLabel.setBounds(40, 80, 100, 25);
-        add(checkOutLabel);
+        reservationTable = new JTable(tableModel);
+        JScrollPane scrollPane = new JScrollPane(reservationTable);
+        scrollPane.setBounds(50, 70, 780, 300);
+        add(scrollPane);
 
-        checkOutChooser = new JDateChooser();
-        checkOutChooser.setBounds(160, 80, 200, 25);
-        add(checkOutChooser);
+        cancelButton = new JButton("Cancel Selected Reservation");
+        cancelButton.setBounds(320, 390, 220, 35);
+        cancelButton.setFont(new Font("Arial", Font.PLAIN, 14));
+        add(cancelButton);
 
-        showButton = new JButton("Show Available Rooms");
-        showButton.setBounds(160, 120, 200, 30);
-        add(showButton);
+        proceedButton = new JButton("Proceed to Summary");
+        proceedButton.setBounds(570, 390, 180, 35);
+        proceedButton.setFont(new Font("Arial", Font.PLAIN, 14));
+        add(proceedButton);
 
-        JLabel roomLabel = new JLabel("Select Room:");
-        roomLabel.setBounds(40, 170, 100, 25);
-        add(roomLabel);
+        cancelButton.addActionListener(e -> cancelSelectedReservation());
+        proceedButton.addActionListener(e -> proceedToSummary());
 
-        roomDropdown = new JComboBox<>();
-        roomDropdown.setBounds(160, 170, 200, 25);
-        add(roomDropdown);
-
-        JLabel emailLabel = new JLabel("Guest Email:");
-        emailLabel.setBounds(40, 210, 100, 25);
-        add(emailLabel);
-
-        emailField = new JTextField();
-        emailField.setBounds(160, 210, 200, 25);
-        add(emailField);
-
-        reserveButton = new JButton("Reserve");
-        reserveButton.setBounds(160, 260, 200, 30);
-        add(reserveButton);
-
-        showButton.addActionListener(e -> fetchAvailableRooms());
-        reserveButton.addActionListener(e -> makeReservation());
-
+        loadReservations();
         setVisible(true);
     }
 
-    public ReservationPanel(String email) {
+    public ReservationPanel() {
 		// TODO Auto-generated constructor stub
 	}
 
-	private void fetchAvailableRooms() {
-        java.util.Date in = checkInChooser.getDate();
-        java.util.Date out = checkOutChooser.getDate();
-
-        if (in == null || out == null || out.before(in)) {
-            JOptionPane.showMessageDialog(this, "Please select valid check-in and check-out dates.");
-            return;
-        }
-
-        availableRooms = roomDAO.getAvailableRooms(new Date(in.getTime()), new Date(out.getTime()));
-        roomDropdown.removeAllItems();
-
-        if (availableRooms.isEmpty()) {
-            roomDropdown.addItem("No rooms available");
-        } else {
-            for (Room r : availableRooms) {
-                roomDropdown.addItem("Room " + r.getRoom_num() + " - ₹" + r.getPrice());
-            }
+	private void loadReservations() {
+        tableModel.setRowCount(0); // Clear existing rows
+        List<Reservation> list = reservationDAO.getReservationsByEmail(guestEmail);
+        for (Reservation r : list) {
+            tableModel.addRow(new Object[]{
+                    r.getReservationId(),
+                    r.getRoomNum(),
+                    r.getGuestEmail(),
+                    r.getCheckInDate(),
+                    r.getCheckOutDate(),
+                    r.getHotelId()
+            });
         }
     }
 
-    private void makeReservation() {
-        if (availableRooms == null || availableRooms.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No available rooms to book.");
+    private void cancelSelectedReservation() {
+        int row = reservationTable.getSelectedRow();
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a reservation to cancel.");
             return;
         }
 
-        int index = roomDropdown.getSelectedIndex();
-        if (index == -1 || index >= availableRooms.size()) {
-            JOptionPane.showMessageDialog(this, "Please select a valid room.");
-            return;
+        int resId = (int) tableModel.getValueAt(row, 0);
+
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Are you sure you want to cancel this reservation?",
+                "Confirm Cancellation",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            reservationDAO.cancelReservation(resId);
+            JOptionPane.showMessageDialog(this, "Reservation canceled successfully.");
+            loadReservations(); // Refresh table
         }
-
-        String email = emailField.getText().trim();
-        if (email.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Guest email cannot be empty.");
-            return;
-        }
-
-        java.util.Date in = checkInChooser.getDate();
-        java.util.Date out = checkOutChooser.getDate();
-
-        Room selectedRoom = availableRooms.get(index);
-
-        Reservation reservation = new Reservation(
-                selectedRoom.getRoom_num(),
-                email,
-                new Date(in.getTime()),
-                new Date(out.getTime()),
-                1 // Fixed hotel ID for now
-        );
-
-        reservationDAO.addReservation(reservation);
-        JOptionPane.showMessageDialog(this, "Reservation successful!");
-
-        roomDropdown.removeAllItems();
-        emailField.setText("");
     }
 
-    public static void main(String[] args) {
-        new ReservationPanel();
+    private void proceedToSummary() {
+        int selectedRow = reservationTable.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Please select a reservation to proceed.");
+            return;
+        }
+
+        int reservationId = (int) tableModel.getValueAt(selectedRow, 0);
     }
 }

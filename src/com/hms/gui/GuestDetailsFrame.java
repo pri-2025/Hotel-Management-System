@@ -1,28 +1,43 @@
 package com.hms.gui;
 
 import com.hms.dao.GuestDAO;
+import com.hms.dao.ReservationDAO;
 import com.hms.dao.impl.GuestDAOImpl;
+import com.hms.dao.impl.ReservationDAOImpl;
 import com.hms.entity.Guest;
+import com.hms.entity.Reservation;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import java.awt.event.*;
+import java.awt.*;
+import java.util.Date;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class GuestDetailsFrame extends JFrame {
 
 	private JTextField nameField, emailField, mobField, addressField;
 	private JRadioButton adultRadio, childRadio;
 	private JRadioButton maleRadio, femaleRadio;
-	private JButton addButton, updateButton, deleteButton, proceedButton;
+	private JButton proceedButton, addGuestButton, deleteGuestButton;
 	private JTable guestTable;
 	private DefaultTableModel tableModel;
 
-	private GuestDAO guestDAO = new GuestDAOImpl();
+	private ButtonGroup typeGroup, genderGroup;
 
-	public GuestDetailsFrame() {
-		setTitle("Guest Management");
-		setSize(880, 630);
+	private GuestDAO guestDAO = new GuestDAOImpl();
+	private ReservationDAO reservationDAO = new ReservationDAOImpl();
+
+	private int roomNum;
+	private Date checkInDate, checkOutDate;
+
+	public GuestDetailsFrame(int roomNum, Date checkInDate, Date checkOutDate) {
+		this.roomNum = roomNum;
+		this.checkInDate = checkInDate;
+		this.checkOutDate = checkOutDate;
+
+		setTitle("Guest Details");
+		setSize(850, 600);
 		setLayout(null);
 		setLocationRelativeTo(null);
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -43,7 +58,7 @@ public class GuestDetailsFrame extends JFrame {
 		adultRadio.setBounds(140, 70, 80, 25);
 		childRadio = new JRadioButton("Child");
 		childRadio.setBounds(220, 70, 80, 25);
-		ButtonGroup typeGroup = new ButtonGroup();
+		typeGroup = new ButtonGroup(); // ✅ class-level variable
 		typeGroup.add(adultRadio);
 		typeGroup.add(childRadio);
 		add(adultRadio);
@@ -57,7 +72,7 @@ public class GuestDetailsFrame extends JFrame {
 		maleRadio.setBounds(140, 110, 80, 25);
 		femaleRadio = new JRadioButton("Female");
 		femaleRadio.setBounds(220, 110, 80, 25);
-		ButtonGroup genderGroup = new ButtonGroup();
+		genderGroup = new ButtonGroup(); // ✅ class-level variable
 		genderGroup.add(maleRadio);
 		genderGroup.add(femaleRadio);
 		add(maleRadio);
@@ -87,20 +102,16 @@ public class GuestDetailsFrame extends JFrame {
 		addressField.setBounds(140, 230, 200, 25);
 		add(addressField);
 
-		addButton = new JButton("Add");
-		addButton.setBounds(30, 280, 100, 30);
-		add(addButton);
+		addGuestButton = new JButton("Add Guest");
+		addGuestButton.setBounds(30, 280, 140, 30);
+		add(addGuestButton);
 
-		updateButton = new JButton("Update");
-		updateButton.setBounds(140, 280, 100, 30);
-		add(updateButton);
+		deleteGuestButton = new JButton("Delete Selected Guest");
+		deleteGuestButton.setBounds(180, 280, 180, 30);
+		add(deleteGuestButton);
 
-		deleteButton = new JButton("Delete");
-		deleteButton.setBounds(250, 280, 100, 30);
-		add(deleteButton);
-
-		proceedButton = new JButton("Proceed to Reservation");
-		proceedButton.setBounds(30, 330, 320, 30);
+		proceedButton = new JButton("Proceed");
+		proceedButton.setBounds(140, 330, 120, 30);
 		add(proceedButton);
 
 		tableModel = new DefaultTableModel();
@@ -108,155 +119,85 @@ public class GuestDetailsFrame extends JFrame {
 
 		guestTable = new JTable(tableModel);
 		JScrollPane scrollPane = new JScrollPane(guestTable);
-		scrollPane.setBounds(370, 30, 480, 470);
+		scrollPane.setBounds(370, 30, 440, 400);
 		add(scrollPane);
 
-		loadGuests();
-
-		addButton.addActionListener(e -> addGuest());
-		updateButton.addActionListener(e -> updateGuest());
-		deleteButton.addActionListener(e -> deleteGuest());
-		proceedButton.addActionListener(e -> proceedToReservation());
-
-		guestTable.addMouseListener(new MouseAdapter() {
-			public void mouseClicked(MouseEvent e) {
-				int row = guestTable.getSelectedRow();
-				nameField.setText(tableModel.getValueAt(row, 0).toString());
-				String type = tableModel.getValueAt(row, 1).toString();
-				if (type.equalsIgnoreCase("Adult"))
-					adultRadio.setSelected(true);
-				else
-					childRadio.setSelected(true);
-				String gender = tableModel.getValueAt(row, 2).toString();
-				if (gender.equalsIgnoreCase("Male"))
-					maleRadio.setSelected(true);
-				else
-					femaleRadio.setSelected(true);
-				emailField.setText(tableModel.getValueAt(row, 3).toString());
-				mobField.setText(tableModel.getValueAt(row, 4).toString());
-				addressField.setText(tableModel.getValueAt(row, 5).toString());
-			}
-		});
+		addGuestButton.addActionListener(e -> addGuestToTable());
+		deleteGuestButton.addActionListener(e -> deleteSelectedGuest());
+		proceedButton.addActionListener(e -> proceedReservation());
 
 		setVisible(true);
 	}
 
-	private void loadGuests() {
-		tableModel.setRowCount(0);
-		List<Guest> list = guestDAO.getAllGuests();
-		for (Guest g : list) {
-			String gender = g.getType().contains("Female") ? "Female" : "Male";
-			String type = g.getType().contains("Adult") ? "Adult" : "Child";
-			tableModel.addRow(new Object[] { g.getName(), type, gender, g.getEmail(), g.getMobno(), g.getAddress() });
-		}
-	}
-
-	private boolean validateFields() {
+	private void addGuestToTable() {
 		String name = nameField.getText().trim();
+		String type = adultRadio.isSelected() ? "Adult" : childRadio.isSelected() ? "Child" : "";
+		String gender = maleRadio.isSelected() ? "Male" : femaleRadio.isSelected() ? "Female" : "";
 		String email = emailField.getText().trim();
 		String mob = mobField.getText().trim();
 		String address = addressField.getText().trim();
 
-		if (name.isEmpty()) {
-			JOptionPane.showMessageDialog(this, "Please enter name.");
-			return false;
-		}
-		if (!adultRadio.isSelected() && !childRadio.isSelected()) {
-			JOptionPane.showMessageDialog(this, "Please select guest type.");
-			return false;
-		}
-		if (!maleRadio.isSelected() && !femaleRadio.isSelected()) {
-			JOptionPane.showMessageDialog(this, "Please select gender.");
-			return false;
-		}
-		if (email.isEmpty() || !email.matches("^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$")) {
-			JOptionPane.showMessageDialog(this, "Enter valid email address.");
-			return false;
-		}
-		if (mob.isEmpty() || !mob.matches("\\d{10}")) {
-			JOptionPane.showMessageDialog(this, "Enter valid 10-digit mobile number.");
-			return false;
-		}
-		if (address.isEmpty()) {
-			JOptionPane.showMessageDialog(this, "Please enter address.");
-			return false;
-		}
-		return true;
-	}
-
-	private void addGuest() {
-		if (!validateFields())
-			return;
-
-		String name = nameField.getText();
-		String type = adultRadio.isSelected() ? "Adult" : "Child";
-		String gender = maleRadio.isSelected() ? "Male" : "Female";
-		String email = emailField.getText();
-		String mob = mobField.getText();
-		String address = addressField.getText();
-
-		Guest g = new Guest(name, type + " - " + gender, email, mob, address);
-		guestDAO.addGuest(g);
-		loadGuests();
-		clearFields();
-	}
-
-	private void updateGuest() {
-		if (!validateFields())
-			return;
-
-		String name = nameField.getText();
-		String type = adultRadio.isSelected() ? "Adult" : "Child";
-		String gender = maleRadio.isSelected() ? "Male" : "Female";
-		String email = emailField.getText();
-		String mob = mobField.getText();
-		String address = addressField.getText();
-
-		Guest g = new Guest(name, type + " - " + gender, email, mob, address);
-		guestDAO.updateGuest(g);
-		loadGuests();
-		clearFields();
-	}
-
-	private void deleteGuest() {
-		String email = emailField.getText().trim();
-		if (email.isEmpty()) {
-			JOptionPane.showMessageDialog(this, "Enter email to delete guest.");
-			return;
-		}
-		guestDAO.deleteGuest(email);
-		loadGuests();
-		clearFields();
-	}
-
-	private void proceedToReservation() {
-		String email = emailField.getText().trim();
-		if (email.isEmpty()) {
-			JOptionPane.showMessageDialog(this, "Please enter guest details before proceeding.");
-			return;
-		}
-		Guest g = guestDAO.getGuestByEmail(email);
-		if (g == null) {
-			JOptionPane.showMessageDialog(this, "Guest not found. Please add guest first.");
+		if (name.isEmpty() || type.isEmpty() || gender.isEmpty() || email.isEmpty() || mob.isEmpty()
+				|| address.isEmpty()) {
+			JOptionPane.showMessageDialog(this, "All fields are mandatory.");
 			return;
 		}
 
-		new ReservationPanel(email);
-		this.dispose();
+		if (!Pattern.matches("^\\d{10}$", mob)) {
+			JOptionPane.showMessageDialog(this, "Mobile number must be exactly 10 digits.");
+			return;
+		}
+
+		if (!Pattern.matches("^[\\w-\\.]+@[\\w-]+(\\.[\\w-]{2,4})+$", email)) {
+			JOptionPane.showMessageDialog(this, "Invalid email format.");
+			return;
+		}
+
+		tableModel.addRow(new Object[] { name, type, gender, email, mob, address });
+		clearForm();
 	}
 
-	private void clearFields() {
+	private void deleteSelectedGuest() {
+		int selectedRow = guestTable.getSelectedRow();
+		if (selectedRow == -1) {
+			JOptionPane.showMessageDialog(this, "Please select a guest to delete.");
+			return;
+		}
+		tableModel.removeRow(selectedRow);
+	}
+
+	private void proceedReservation() {
+		if (tableModel.getRowCount() == 0) {
+			JOptionPane.showMessageDialog(this, "Please add at least one guest.");
+			return;
+		}
+
+		for (int i = 0; i < tableModel.getRowCount(); i++) {
+			String name = (String) tableModel.getValueAt(i, 0);
+			String type = (String) tableModel.getValueAt(i, 1);
+			String gender = (String) tableModel.getValueAt(i, 2);
+			String email = (String) tableModel.getValueAt(i, 3);
+			String mob = (String) tableModel.getValueAt(i, 4);
+			String address = (String) tableModel.getValueAt(i, 5);
+
+			Guest guest = new Guest(name, type + " - " + gender, email, mob, address);
+			guestDAO.addGuest(guest);
+			Reservation reservation = new Reservation(roomNum, email, new java.sql.Date(checkInDate.getTime()),
+					new java.sql.Date(checkOutDate.getTime()));
+			reservationDAO.addReservation(reservation);
+		}
+
+		JOptionPane.showMessageDialog(this, "Reservation successful!");
+		new ReservationPanel(); // You may pass email if filtering
+		dispose();
+	}
+
+	private void clearForm() {
 		nameField.setText("");
 		emailField.setText("");
 		mobField.setText("");
 		addressField.setText("");
-		adultRadio.setSelected(false);
-		childRadio.setSelected(false);
-		maleRadio.setSelected(false);
-		femaleRadio.setSelected(false);
-	}
-
-	public static void main(String[] args) {
-		new GuestDetailsFrame();
+		typeGroup.clearSelection();
+		genderGroup.clearSelection();
 	}
 }

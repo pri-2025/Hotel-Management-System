@@ -28,7 +28,16 @@ public class Reservation {
         this.hotelId = hotelId;
     }
 
-    public int getReservationId() {
+    public Reservation(int roomNum, String guestEmail, java.util.Date checkInDate, java.util.Date checkOutDate) {
+        this.roomNum = roomNum;
+        this.guestEmail = guestEmail;
+        this.checkInDate = new java.sql.Date(checkInDate.getTime());
+        this.checkOutDate = new java.sql.Date(checkOutDate.getTime());
+        this.hotelId = 1; // or fetch dynamically if needed
+    }
+
+
+	public int getReservationId() {
         return reservationId;
     }
 
