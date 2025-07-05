@@ -27,9 +27,9 @@ A **Java-based Hotel Management System** built with **Swing GUI** and **MySQL da
 ---
 
 ##  Project Structure
-com.hms
-├── db # JDBC connection class
-├── dao # Interfaces for DAO pattern
-├── dao.impl # DAO implementation using JDBC
-├── entity # Entity classes (Hotel, Room, Guest, Reservation)
-└── gui # GUI panels (HotelPanel, RoomPanel, GuestPanel, ReservationPanel)
+- com.hms
+- ├── db # JDBC connection class
+- ├── dao # Interfaces for DAO pattern
+- ├── dao.impl # DAO implementation using JDBC
+- ├── entity # Entity classes (Hotel, Room, Guest, Reservation)
+- └── gui # GUI panels (HotelPanel, RoomPanel, GuestPanel, ReservationPanel)
