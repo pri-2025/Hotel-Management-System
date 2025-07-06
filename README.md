@@ -36,48 +36,63 @@ com.hms
 └── gui          GUI panels (HotelPanel, RoomPanel, GuestPanel, ReservationPanel)
 ```
 
-## 🖼️ GUI Screenshots & Flow
+##  GUI Screenshots & Flow
 
 The Hotel Management System follows a smooth and user-friendly reservation flow. Here's a walkthrough with corresponding GUI screenshots:
 
 ---
 
-### 🏨 Hotel Panel (Welcome Page)
+###  Hotel Panel (Welcome Page)
 
-<img src="screenshots/Hotel%20Panel%20GUI.png" width="600"/>
+The application begins with the **Hotel Panel**, where the hotel information is displayed and managed.
 
----
-
-### 📅 Date Selection Panel
-
-<img src="screenshots/Date%20Selection%20Panel%20GUI.png" width="600"/>
+<img src="screenshots/Hotel%20Panel%20GUI.png" width="500"/>
 
 ---
 
-### 🗓️ Calendar View
+###  Date Selection Panel
 
-<img src="screenshots/Calender.png" width="600"/>
+After choosing a hotel, the user is prompted to **select check-in and check-out dates**.
 
----
-
-### 🛏️ Room Availability Panel
-
-<img src="screenshots/Room%20Availability%20Panel.png" width="600"/>
+<img src="screenshots/Date%20Selection%20Panel%20GUI.png" width="500"/>
 
 ---
 
-### ✅ Date Confirmation Dialogue Box
+###  Calendar View
 
-<img src="screenshots/Date%20Confirmation%20Dialogue%20Box.png" width="600"/>
+A calendar view is provided for users to easily pick dates.
 
----
-
-### 👤 Guest Details Panel
-
-<img src="screenshots/Guest%20Details%20GUI.png" width="600"/>
+<img src="screenshots/Calender.png" width="500"/>
 
 ---
 
-### 📋 Reservation Panel
+###  Room Availability Panel
 
-<img src="screenshots/Reservation%20.png" width="600"/>
+The system shows a list of **available rooms for the selected date range**.
+
+<img src="screenshots/Room%20Availability%20Panel.png" width="500"/>
+
+---
+
+###  Date Confirmation Dialogue Box
+
+Before proceeding, the selected check-in/check-out dates are **confirmed** with the user.
+
+<img src="screenshots/Date%20Confirmation%20Dialogue%20Box.png" width="500"/>
+
+---
+
+###  Guest Details Panel
+
+The user is then asked to **enter guest details** such as name, contact, and type (adult/child).
+
+<img src="screenshots/Guest%20Details%20GUI.png" width="500"/>
+
+---
+
+###  Reservation Panel
+
+Finally, the **reservation is confirmed**, and details are saved in the database.
+
+<img src="screenshots/Reservation%20.png" width="500"/>
+
